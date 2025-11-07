@@ -1,39 +1,94 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
-#include "utils.h"
+#include "utils.h"   
+int is_sorted(int *A, int n) {
+    for (int i = 1; i < n; ++i)
+        if (A[i-1] > A[i]) return 0;
+    return 1;
+}
+
+double medir_tempo_copia(void (*f)(int*,int), int *orig, int n) {
+    int *B = malloc(n * sizeof(int));
+    if (!B) { perror("malloc"); exit(1); }
+    memcpy(B, orig, n * sizeof(int));
+    clock_t inicio = clock();
+    f(B, n);
+    clock_t fim = clock();
+    int sorted = is_sorted(B, n);
+    free(B);
+    return (double)(fim - inicio) / CLOCKS_PER_SEC;
+}
 
 int main() {
+    srand((unsigned) time(NULL));
 
-    srand(time(NULL));
+    int tamanhos[] = {1000, 5000, 10000};
+    int n_tam = sizeof(tamanhos)/sizeof(tamanhos[0]);
 
-    int tamanhos[] = {500, 1000};
-    int qtd = 3;
+    const char *tipos_nome[] = {"aleatorio","crescente","decrescente"};
+    const char *alg_nome[] = {"insertion","mergesort2","quicksort"};
 
-    FILE *arq = fopen("tempos.txt", "w");
+    FILE *out = fopen("tempos.csv", "w");
+    if (!out) { perror("fopen"); return 1; }
 
-    for (int t = 0; t < qtd; t++) {
-        int n = tamanhos[t];
-        int *A = malloc(n * sizeof(int));
+    fprintf(out, "tamanho,tipo,algoritmo,tempo_s,ordenado\n");
 
-        fprintf(arq, "\nTamanho: %d\n", n);
+    for (int ti = 0; ti < n_tam; ++ti) {
+        int n = tamanhos[ti];
+        int *orig = malloc(n * sizeof(int));
+        if (!orig) { perror("malloc"); return 1; }
 
-        // Insertion
-        gerarAleatorio(A, n);
-        fprintf(arq, "Insertion: %f\n", medirTempo(insertion, A, n));
+        for (int tipo = 0; tipo < 3; ++tipo) {
+            if (tipo == 0) gerarAleatorio(orig, n);
+            else if (tipo == 1) gerarCrescente(orig, n);
+            else gerarDecrescente(orig, n);
 
-        // MergeSort
-        gerarAleatorio(A, n);
-        fprintf(arq, "MergeSort2: %f\n", medirTempo(mergesort2, A, n));
+            // insertion
+            {
+                int *tmp = malloc(n * sizeof(int));
+                memcpy(tmp, orig, n * sizeof(int));
+                clock_t i0 = clock();
+                insertion(tmp, n);
+                clock_t i1 = clock();
+                int ok = is_sorted(tmp, n);
+                double tempo = (double)(i1 - i0) / CLOCKS_PER_SEC;
+                fprintf(out, "%d,%s,%s,%.6f,%d\n", n, tipos_nome[tipo], alg_nome[0], tempo, ok);
+                free(tmp);
+            }
 
-        // QuickSort
-        gerarAleatorio(A, n);
-        fprintf(arq, "QuickSort: %f\n", medirTempo(quicksort, A, n));
+            // mergesort2
+            {
+                int *tmp = malloc(n * sizeof(int));
+                memcpy(tmp, orig, n * sizeof(int));
+                clock_t i0 = clock();
+                mergesort2(tmp, n);
+                clock_t i1 = clock();
+                int ok = is_sorted(tmp, n);
+                double tempo = (double)(i1 - i0) / CLOCKS_PER_SEC;
+                fprintf(out, "%d,%s,%s,%.6f,%d\n", n, tipos_nome[tipo], alg_nome[1], tempo, ok);
+                free(tmp);
+            }
 
-        free(A);
+            // quicksort
+            {
+                int *tmp = malloc(n * sizeof(int));
+                memcpy(tmp, orig, n * sizeof(int));
+                clock_t i0 = clock();
+                quicksort(tmp, n);
+                clock_t i1 = clock();
+                int ok = is_sorted(tmp, n);
+                double tempo = (double)(i1 - i0) / CLOCKS_PER_SEC;
+                fprintf(out, "%d,%s,%s,%.6f,%d\n", n, tipos_nome[tipo], alg_nome[2], tempo, ok);
+                free(tmp);
+            }
+        }
+
+        free(orig);
     }
 
-    fclose(arq);
-
+    fclose(out);
+    printf("Testes concluídos. Resultados salvos em tempos.csv\n");
     return 0;
 }
