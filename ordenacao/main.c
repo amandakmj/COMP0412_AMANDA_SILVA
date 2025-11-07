@@ -87,8 +87,17 @@ int main() {
 
         free(orig);
     }
-
+    
     fclose(out);
     printf("Testes concluídos. Resultados salvos em tempos.csv\n");
+
+    // tempo
+    clock_t inicio_total = clock();
+    clock_t fim_total = clock();
+    double tempo_total = (double)(fim_total - inicio_total) / CLOCKS_PER_SEC;
+    printf("Tempo total medido com clock(): %.6f segundos\n", tempo_total);
+    printf("Para medir usando o programa 'time', execute:\n");
+    printf("time ./ordenacao\n");
+
     return 0;
 }
